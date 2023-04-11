@@ -232,9 +232,16 @@ vector<pair<int, int>> getAdjacentAntsPosition(vector<vector<Organism *>> &organ
   return antsPosition;
 }
 
-getAdjacentValidPosition(vector<vector<Organism *>> &organism, int currRow, int currCol, int rowLength, int colLength)
+vector<pair<int, int>>getAdjacentValidPosition(vector<vector<Organism *>> &organism, int currRow, int currCol, int rowLength, int colLength) {
+  vector<pair<int, int>> validPosition;
+  if (currRow > 0 && organism[currRow - 1][currCol] == nullptr) validPosition.push_back({currRow - 1, currCol});
+  if (currRow < rowLength - 1 && organism[currRow + 1][currCol] == nullptr) validPosition.push_back({currRow + 1, currCol});
+  if (currCol > 0 && organism[currRow][currCol - 1] == nullptr) validPosition.push_back({currRow, currCol + 1});
+  if (currCol < colLength - 1 && organism[currRow][currCol + 1] == nullptr) validPosition.push_back({currRow, currCol + 1});
+  return validPosition;
+}
 
-    void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength)
+void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength)
 {
   // move the doodlebugs first, afterwards move the ants
 
@@ -257,12 +264,12 @@ getAdjacentValidPosition(vector<vector<Organism *>> &organism, int currRow, int 
            delete adjacentAnt;
            organism[ant_row][ant_col] = nullptr;
            swapPosition(organism, row, col, ant_row, ant_col);
-         } else
-         { // else there's no adjacent ant, move it to a random valid position
+         } else { // else there's no adjacent ant, move it to a random valid position
           vector<pair<int, int>> validPosition;
-
+          validPosition = getAdjacentValidPosition(organism, row, col, rowLength, colLength);
+          auto [new_row, new_col] = validPosition[rand() % validPosition.size()];
+          swapPosition(organism, row, col, new_row, new_col);
          }
-             int curr_moves_made = currOrganism->getMovesTaken();
          // handle edge case first: starve: moves first, check starve -> dies
          if (currOrganism->starved_to_death()) {
           // has starved to death, remove the content and delete pointers
@@ -289,6 +296,10 @@ void swapPosition(vector<vector<Organism *>> &organism, int row, int col, int an
   fill_organism(organism, row_length, col_length);
   visualizeOrganism(organism, row_length, col_length);
   nextStep(organism, row_length, col_length);
+  cout << "visualize organism after doodlebug takes another step " << endl;
+  visualizeOrganism(organism, row_length, col_length);
+  // for (int i = 0; i < 2; i++) {
 
+  // }
 
 }
