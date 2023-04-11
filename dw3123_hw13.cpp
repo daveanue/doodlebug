@@ -24,7 +24,8 @@ public:
   virtual int getDaysStarved() const = 0;
   virtual void take_move() = 0;
   void incrementMovesTaken();
-  virtual bool starved_to_death() const = 0;
+  virtual bool starved_to_death() = 0;
+  virtual void setDayStarved() = 0;
   int getMovesTaken() const { return this->moves_taken; }
   Organism() : moves_taken(0) {}
 };
@@ -42,6 +43,8 @@ public:
   void take_move() override;
   bool breedable() const override;
   int getDaysStarved() const override;
+  void setDayStarved();
+  bool starved_to_death() override;
 };
 // randomly move up down left right
 void Ant::take_move()
@@ -76,7 +79,7 @@ public:
   int getDaysStarved() const override;
   void setDayStarved();
   void incrementDayStarved();
-  bool starve_to_death() const override;
+  bool starved_to_death() override;
 };
 // only when it eats, we reset the doodlebug's day_starved  = 0;
 void Doodlebug::setDayStarved() {
@@ -99,7 +102,8 @@ int Doodlebug::getDaysStarved() const
 {
   return this->days_starved;
 }
-bool Doodlebug::starve_to_death() {
+bool Doodlebug::starved_to_death()
+{
   return (this->getDaysStarved() % 8) == 0;
 }
 
@@ -194,7 +198,43 @@ void visualizeOrganism(vector<vector<Organism *>> &organism, int rowLength, int 
     cout << endl;
   }
 }
-void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength)
+
+vector<pair<int, int>> getAdjacentAntsPosition(vector<vector<Organism *>> &organism, int currRow, int currCol, int rowLength, int colLength)
+{
+  vector<pair<int, int>> antsPosition;
+  // going UP
+  if (currRow > 0 && organism[currRow - 1][currCol]) {
+    if (organism[currRow - 1][currCol]->getIdentity() == "Ants") {
+      antsPosition.push_back({currRow - 1, currCol});
+    }
+  }
+  // going DOWN
+  if (currRow < rowLength - 1 && organism[currRow + 1][currCol]) {
+    if (organism[currRow + 1][currCol]->getIdentity() == "Ants")
+    {
+      antsPosition.push_back({currRow + 1, currCol});
+    }
+  }
+  // going LEfT
+  if (currCol > 0 && organism[currRow][currCol - 1]) {
+    if (organism[currRow][currCol - 1]->getIdentity() == "Ants")
+    {
+      antsPosition.push_back({currRow, currCol - 1});
+    }
+  }
+  // going RIGHT
+  if (currCol < colLength - 1 && organism[currRow][currCol + 1]) {
+    if (organism[currRow][currCol + 1]->getIdentity() == "Ants")
+    {
+      antsPosition.push_back({currRow, currCol + 1});
+    }
+  }
+  return antsPosition;
+}
+
+getAdjacentValidPosition(vector<vector<Organism *>> &organism, int currRow, int currCol, int rowLength, int colLength)
+
+    void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength)
 {
   // move the doodlebugs first, afterwards move the ants
 
@@ -203,20 +243,42 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
       Organism* currOrganism = organism[row][col];
       // if it's a doodlebugs
       if (currOrganism && currOrganism->getIdentity() == "Doodlebug") {
-        // moves first
+        // moves first, this increment the moves taken
          currOrganism->take_move();
+         vector<pair<int, int>> antPositions;
          // write logic to actually move the currOrganism on the board to adjacent position
-            // if there's an adjacent ant, eat it -> setDayStarve(0)
-              // move the doodlebug to that position by: deleting the ant, and move doodlebug to that position
-            // else there's no adjacent ant, move it to a random valid position
-         int curr_moves_made = currOrganism->getMovesTaken();
+         antPositions = getAdjacentAntsPosition(organism, row, col, rowLength, colLength);
+         // if there's an adjacent ant, eat it -> setDayStarve(0)
+         // move the doodlebug to that position by: deleting the ant, and move doodlebug to that position
+         if (antPositions.size() > 0) { // if there's an ant nearby
+           currOrganism->setDayStarved();
+           auto [ant_row, ant_col] = antPositions[rand() % antPositions.size()];
+           Organism* adjacentAnt = organism[ant_row][ant_col];
+           delete adjacentAnt;
+           organism[ant_row][ant_col] = nullptr;
+           swapPosition(organism, row, col, ant_row, ant_col);
+         } else
+         { // else there's no adjacent ant, move it to a random valid position
+          vector<pair<int, int>> validPosition;
+
+         }
+             int curr_moves_made = currOrganism->getMovesTaken();
          // handle edge case first: starve: moves first, check starve -> dies
-         if (currOrganism->starve_to_death())
+         if (currOrganism->starved_to_death()) {
+          // has starved to death, remove the content and delete pointers
+            delete currOrganism;
+            organism[row][col] = nullptr;
+         }
       }
     }
   }
+}
 
-
+void swapPosition(vector<vector<Organism *>> &organism, int row, int col, int ant_row, int ant_col)
+{
+  Organism* temp = organism[row][col];
+  organism[row][col] = nullptr;
+  organism[ant_row][ant_col] = temp;
 }
 
     int main()
