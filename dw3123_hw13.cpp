@@ -17,11 +17,12 @@ private:
   int moves_taken;
 
 public:
+  virtual ~Organism() = default;
   virtual string getIdentity() const = 0;
   // take_move will call incrementMove,
   // we will handle the moving logic on the board instead.
   virtual bool breedable() const = 0; // for ants , check moves taken moves_taken % 3,
-  virtual int getDaysStarved() const = 0;
+  virtual int getDaysStarved() = 0;
   virtual void take_move() = 0;
   void incrementMovesTaken();
   virtual bool starved_to_death() = 0;
@@ -40,10 +41,11 @@ public:
   {
     return "Ants";
   }
+  virtual ~Ant() = default;
   void take_move() override;
   bool breedable() const override;
-  int getDaysStarved() const override;
-  void setDayStarved();
+  int getDaysStarved() override;
+  void setDayStarved() override;
   bool starved_to_death() override;
 };
 // randomly move up down left right
@@ -57,10 +59,16 @@ bool Ant::breedable() const
 {
   return (this->getMovesTaken() % 3) == 0;
 }
-
-int Ant::getDaysStarved() const
+void Ant::setDayStarved() {
+  cout << "Ants won't be starved";
+}
+int Ant::getDaysStarved()
 {
   return 0;
+}
+
+bool Ant::starved_to_death() {
+  return false;
 }
 
 class Doodlebug : public Organism
@@ -74,10 +82,11 @@ public:
   {
     return "Doodlebug";
   }
+  virtual ~Doodlebug() = default;
   void take_move() override;
   bool breedable() const override;
-  int getDaysStarved() const override;
-  void setDayStarved();
+  int getDaysStarved() override;
+  void setDayStarved() override;
   void incrementDayStarved();
   bool starved_to_death() override;
 };
@@ -98,7 +107,7 @@ bool Doodlebug::breedable() const
   return (this->getMovesTaken() % 8) == 0;
 }
 
-int Doodlebug::getDaysStarved() const
+int Doodlebug::getDaysStarved()
 {
   return this->days_starved;
 }
@@ -140,28 +149,6 @@ void fill_organism(vector<vector<Organism *>> &organism, int rowLength, int colL
     organism[row][col] = doodlebug;
   }
 }
-
-// void visualizeOrganism(vector<vector<Organism *>> &organism, int rowLength, int colLength) {
-//   for (int i = 0; i < rowLength; i++)
-//   {
-//     for (int j = 0; j < colLength; j++)
-//     {
-//        if (organism[i][j] == nullptr)
-//        {
-//          cout << " - ";
-//        }
-//        else
-//        {
-//          string s = organism[i][j]->getIdentity();
-//          if (s == "Ants")
-//            cout << " A ";
-//          else if (s == "Doodlebug")
-//            cout << " D ";
-//        }
-//     }
-//     cout << endl;
-//   }
-// }
 
 void visualizeOrganism(vector<vector<Organism *>> &organism, int rowLength, int colLength)
 {
@@ -229,6 +216,7 @@ vector<pair<int, int>> getAdjacentAntsPosition(vector<vector<Organism *>> &organ
       antsPosition.push_back({currRow, currCol + 1});
     }
   }
+  cout << "the ant position size is : " <<antsPosition.size() << endl;
   return antsPosition;
 }
 
@@ -238,7 +226,14 @@ vector<pair<int, int>>getAdjacentValidPosition(vector<vector<Organism *>> &organ
   if (currRow < rowLength - 1 && organism[currRow + 1][currCol] == nullptr) validPosition.push_back({currRow + 1, currCol});
   if (currCol > 0 && organism[currRow][currCol - 1] == nullptr) validPosition.push_back({currRow, currCol + 1});
   if (currCol < colLength - 1 && organism[currRow][currCol + 1] == nullptr) validPosition.push_back({currRow, currCol + 1});
+  cout << "valid position size for Doodlebug currently is :" << validPosition.size() << endl;
   return validPosition;
+}
+void swapPosition(vector<vector<Organism *>> &organism, int row, int col, int ant_row, int ant_col)
+{
+  Organism *temp = organism[row][col];
+  organism[row][col] = nullptr;
+  organism[ant_row][ant_col] = temp;
 }
 
 void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength)
@@ -259,15 +254,25 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
          // move the doodlebug to that position by: deleting the ant, and move doodlebug to that position
          if (antPositions.size() > 0) { // if there's an ant nearby
            currOrganism->setDayStarved();
-           auto [ant_row, ant_col] = antPositions[rand() % antPositions.size()];
+           // auto [x, y] is an c++ 17 extension
+          //  auto [ant_row, ant_col] = antPositions[rand() % antPositions.size()];
+           auto ant_position = antPositions[rand() % antPositions.size()];
+           int ant_row = ant_position.first;
+           int ant_col = ant_position.second;
            Organism* adjacentAnt = organism[ant_row][ant_col];
            delete adjacentAnt;
            organism[ant_row][ant_col] = nullptr;
            swapPosition(organism, row, col, ant_row, ant_col);
+           cout << "visualize the board after the swap position" << endl;
+           visualizeOrganism(organism, row_length, col_length);
          } else { // else there's no adjacent ant, move it to a random valid position
           vector<pair<int, int>> validPosition;
           validPosition = getAdjacentValidPosition(organism, row, col, rowLength, colLength);
-          auto [new_row, new_col] = validPosition[rand() % validPosition.size()];
+          // this is c++ 17 extension
+          // auto [new_row, new_col] = validPosition[rand() % validPosition.size()];
+          auto new_position = validPosition[rand() % validPosition.size()];
+          int new_row = new_position.first;
+          int new_col = new_position.second;
           swapPosition(organism, row, col, new_row, new_col);
          }
          // handle edge case first: starve: moves first, check starve -> dies
@@ -277,16 +282,15 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
             organism[row][col] = nullptr;
          }
       }
+
+
     }
   }
 }
 
-void swapPosition(vector<vector<Organism *>> &organism, int row, int col, int ant_row, int ant_col)
-{
-  Organism* temp = organism[row][col];
-  organism[row][col] = nullptr;
-  organism[ant_row][ant_col] = temp;
-}
+// BUG CHECK: correctly outputs two doodlebugs adjacent ant size and validposition size,
+// then it error: segmentation fault:11
+
 
     int main()
 {
@@ -294,12 +298,11 @@ void swapPosition(vector<vector<Organism *>> &organism, int row, int col, int an
   srand(time(0));
   vector<vector<Organism *>> organism(row_length, vector<Organism *>(col_length, nullptr));
   fill_organism(organism, row_length, col_length);
+  cout << "visualize initial board" << endl;
   visualizeOrganism(organism, row_length, col_length);
   nextStep(organism, row_length, col_length);
   cout << "visualize organism after doodlebug takes another step " << endl;
-  visualizeOrganism(organism, row_length, col_length);
-  // for (int i = 0; i < 2; i++) {
+  // visualizeOrganism(organism, row_length, col_length);
 
-  // }
 
 }
