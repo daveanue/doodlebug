@@ -150,73 +150,117 @@ void fill_organism(vector<vector<Organism *>> &organism, int rowLength, int colL
   }
 }
 
+// void visualizeOrganism(vector<vector<Organism *>> &organism, int rowLength, int colLength)
+// {
+//   cout << "+";
+//   for (int j = 0; j < colLength; j++)
+//   {
+//     cout << "---+";
+//   }
+//   cout << endl;
+//   for (int i = 0; i < rowLength; i++)
+//   {
+//     cout << "|";
+//     for (int j = 0; j < colLength; j++)
+//     {
+//        if (organism[i][j] == nullptr)
+//        {
+//          cout << "   |";
+//        }
+//        else
+//        {
+//          string s = organism[i][j]->getIdentity();
+//          if (s == "Ants")
+//            cout << " A |";
+//          else if (s == "Doodlebug")
+//            cout << " D |";
+//        }
+//     }
+//     cout << endl
+//          << "+";
+//     for (int j = 0; j < colLength; j++)
+//     {
+//        cout << "---+";
+//     }
+//     cout << endl;
+//   }
+// }
+
 void visualizeOrganism(vector<vector<Organism *>> &organism, int rowLength, int colLength)
 {
-  cout << "+";
-  for (int j = 0; j < colLength; j++)
+  // print top border
+  cout << "+---";
+  for (int j = 1; j < colLength; j++)
   {
-    cout << "---+";
+    cout << "+---";
   }
-  cout << endl;
+  cout << "+" << endl;
+
+  // print column labels
+  cout << "|   ";
+  for (int j = 1; j < colLength; j++)
+  {
+    cout << "| " << j << " ";
+  }
+  cout << "|" << endl;
+
+  // print middle rows
   for (int i = 0; i < rowLength; i++)
   {
-    cout << "|";
+    // print left border and row label
+    cout << "+---";
+    for (int j = 1; j < colLength; j++)
+    {
+       cout << "+---";
+    }
+    cout << "+" << endl;
+    cout << "| " << i + 1 << " ";
+
+    // print organism identities or empty spaces
     for (int j = 0; j < colLength; j++)
     {
        if (organism[i][j] == nullptr)
        {
-         cout << "   |";
+         cout << "|   ";
        }
        else
        {
          string s = organism[i][j]->getIdentity();
          if (s == "Ants")
-           cout << " A |";
+           cout << "| A ";
          else if (s == "Doodlebug")
-           cout << " D |";
+           cout << "| D ";
        }
     }
-    cout << endl
-         << "+";
-    for (int j = 0; j < colLength; j++)
-    {
-       cout << "---+";
-    }
-    cout << endl;
+    cout << "|" << endl;
   }
+
+  // print bottom border
+  cout << "+---";
+  for (int j = 1; j < colLength; j++)
+  {
+    cout << "+---";
+  }
+  cout << "+" << endl;
 }
 
 vector<pair<int, int>> getAdjacentAntsPosition(vector<vector<Organism *>> &organism, int currRow, int currCol, int rowLength, int colLength)
 {
   vector<pair<int, int>> antsPosition;
-  // going UP
-  if (currRow > 0 && organism[currRow - 1][currCol]) {
-    if (organism[currRow - 1][currCol]->getIdentity() == "Ants") {
-      antsPosition.push_back({currRow - 1, currCol});
-    }
-  }
-  // going DOWN
-  if (currRow < rowLength - 1 && organism[currRow + 1][currCol]) {
-    if (organism[currRow + 1][currCol]->getIdentity() == "Ants")
-    {
-      antsPosition.push_back({currRow + 1, currCol});
-    }
-  }
-  // going LEfT
-  if (currCol > 0 && organism[currRow][currCol - 1]) {
-    if (organism[currRow][currCol - 1]->getIdentity() == "Ants")
-    {
-      antsPosition.push_back({currRow, currCol - 1});
-    }
-  }
-  // going RIGHT
-  if (currCol < colLength - 1 && organism[currRow][currCol + 1]) {
-    if (organism[currRow][currCol + 1]->getIdentity() == "Ants")
-    {
-      antsPosition.push_back({currRow, currCol + 1});
-    }
-  }
-  cout << "the ant position size is : " <<antsPosition.size() << endl;
+
+  // Check adjacent cells for ants
+  if (currRow > 0 && organism[currRow - 1][currCol] && organism[currRow - 1][currCol]->getIdentity() == "Ants")
+    antsPosition.push_back({currRow - 1, currCol});
+
+  if (currRow < rowLength - 1 && organism[currRow + 1][currCol] && organism[currRow + 1][currCol]->getIdentity() == "Ants")
+    antsPosition.push_back({currRow + 1, currCol});
+
+  if (currCol > 0 && organism[currRow][currCol - 1] && organism[currRow][currCol - 1]->getIdentity() == "Ants")
+    antsPosition.push_back({currRow, currCol - 1});
+
+  if (currCol < colLength - 1 && organism[currRow][currCol + 1] && organism[currRow][currCol + 1]->getIdentity() == "Ants")
+    antsPosition.push_back({currRow, currCol + 1});
+
   return antsPosition;
 }
 
@@ -235,14 +279,15 @@ vector<pair<int, int>>getAdjacentValidPosition(vector<vector<Organism *>> &organ
 void swapPosition(vector<vector<Organism *>> &organism, int row, int col, int ant_row, int ant_col)
 {
   Organism *temp = organism[row][col];
-  organism[row][col] = nullptr;
+  organism[row][col] = organism[ant_row][ant_col];
   organism[ant_row][ant_col] = temp;
+  // Set the original position of the doodlebug to nullptr
+  organism[row][col] = nullptr;
 }
 
 void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength)
 {
   // move the doodlebugs first, afterwards move the ants
-
   for (int row = 0; row < rowLength; row++) {
     for (int col = 0; col < colLength; col++) {
       Organism* currOrganism = organism[row][col];
@@ -250,8 +295,7 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
       vector<pair<int, int>> validPosition;
       int new_row = row, new_col = col;
       // if it's a doodlebugs
-      if (currOrganism && currOrganism->getIdentity() == "Doodlebug") {
-        // moves first, this increment the moves taken
+      if (currOrganism && currOrganism->getIdentity() == "Doodlebug") { // moves first, this increment the moves taken
          currOrganism->take_move();
          // write logic to actually move the currOrganism on the board to adjacent position
          antPositions = getAdjacentAntsPosition(organism, row, col, rowLength, colLength);
@@ -265,11 +309,11 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
            int new_row = ant_position.first;
            int new_col = ant_position.second;
            Organism* adjacentAnt = organism[new_row][new_col];
-           delete adjacentAnt;
+          //  delete adjacentAnt;
            organism[new_row][new_col] = nullptr;
            swapPosition(organism, row, col, new_row, new_col);
-           cout << "visualize the board after the swap position" << endl;
-           visualizeOrganism(organism, row_length, col_length);
+          //  cout << "visualize the board after the swap position" << endl;
+          //  visualizeOrganism(organism, rowLength, colLength);
          } else { // else there's no adjacent ant, move it to a random valid position
           validPosition = getAdjacentValidPosition(organism, row, col, rowLength, colLength);
           // this is c++ 17 extension
@@ -279,17 +323,24 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
             auto new_position = validPosition[rand() % validPosition.size()];
             new_row = new_position.first;
             new_col = new_position.second;
+            // cout << " what are the possible new_row : " << new_row << endl;
+            // cout << " what are the possible new_col : " << new_col << endl;
+
             swapPosition(organism, row, col, new_row, new_col);
+            // visualizeOrganism(organism, rowLength, colLength);
           }
          }
-         // handle edge case first: starve: after we already moved, check starve -> dies
+          // visualize After moving either to consume ants, or to empty space
+        //  cout << "visualize After moving either to consume ants, or to empty space" << endl;
+        //  visualizeOrganism(organism, rowLength, colLength);
          if (currOrganism->starved_to_death()) {
           // has starved to death, remove the content and delete pointers
-            delete currOrganism;
-            organism[row][col] = nullptr;
+            // delete currOrganism;
+            organism[new_row][new_col] = nullptr;
          }
          // if it's breedable, creates a new ant in an adjacent cell that is empty
-         if (currOrganism->breedable()) {
+         // could be possible that it's nullptr
+         if (currOrganism != nullptr && currOrganism->breedable()) {
             // using the new_row, new_col check validAdjacentPosition
             validPosition = getAdjacentValidPosition(organism, new_row, new_col, row_length, col_length);
             // if there is a valid position
@@ -302,25 +353,21 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
             }
          }
       }
-
-
     }
   }
 
 // moves ants
-  for (int row = 0; row < rowLength; row++) {
-    for (int col = 0; col < colLength; col++) {
-      Organism* currOrganism = organism[row][col];
-      if (currOrganism && currOrganism->getIdentity() == "Ants") {
-        currOrganism->take_move();
+  // for (int row = 0; row < rowLength; row++) {
+  //   for (int col = 0; col < colLength; col++) {
+  //     Organism* currOrganism = organism[row][col];
+  //     if (currOrganism && currOrganism->getIdentity() == "Ants") {
+  //       currOrganism->take_move();
 
-      }
-    }
-  }
+  //     }
+  //   }
+  // }
+
 }
-
-// BUG CHECK: correctly outputs two doodlebugs adjacent ant size and validposition size,
-// then it error: segmentation fault:11
 
 
     int main()
@@ -332,8 +379,10 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
   cout << "visualize initial board" << endl;
   visualizeOrganism(organism, row_length, col_length);
   nextStep(organism, row_length, col_length);
-  cout << "visualize organism after doodlebug takes another step " << endl;
-  // visualizeOrganism(organism, row_length, col_length);
+
+  // THIS WON"T RUN CORRECTLY..
+  cout << "visualize organism after taking another step " << endl;
+  visualizeOrganism(organism, row_length, col_length);
 
 
 }
