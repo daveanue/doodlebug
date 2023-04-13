@@ -15,7 +15,7 @@ class Organism
 private:
   // child class can access this property through getters only
   int moves_taken;
-
+  bool hasMoved;
 public:
   virtual ~Organism() = default;
   virtual string getIdentity() const = 0;
@@ -28,7 +28,9 @@ public:
   virtual bool starved_to_death() = 0;
   virtual void setDayStarved() = 0;
   int getMovesTaken() const { return this->moves_taken; }
-  Organism() : moves_taken(0) {}
+  void setHasMoved() {this->hasMoved = !hasMoved;}
+  bool getHasMoved() {return this->hasMoved;}
+  Organism() : moves_taken(0), hasMoved(false) {}
 };
 void Organism::incrementMovesTaken()
 {
@@ -53,6 +55,7 @@ public:
 void Ant::take_move()
 {
   // access member function use ->, access member variable use .
+  this->setHasMoved();
   this->incrementMovesTaken();
 }
 
@@ -104,6 +107,7 @@ void Doodlebug::incrementDayStarved()
 }
 void Doodlebug::take_move()
 {
+  this->setHasMoved();
   this->incrementMovesTaken();
   this->incrementDayStarved();
 }
@@ -350,111 +354,132 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
       vector<pair<int, int>> antPositions;
       vector<pair<int, int>> validPosition;
       int new_row = row, new_col = col;
-      // if it's a doodlebugs
-      if (currOrganism && currOrganism->getIdentity() == "Doodlebug")
-      { // moves first, this increment the moves taken
-        currOrganism->take_move();
-        // write logic to actually move the currOrganism on the board to adjacent position
-        antPositions = getAdjacentAntsPosition(organism, row, col, rowLength, colLength);
-        for (auto pos : antPositions)
-        {
-          std::cout << "(" << pos.first << ", " << pos.second << ")" << std::endl;
+        if (currOrganism != nullptr && currOrganism->getHasMoved()) {
+          currOrganism->setHasMoved();
+          continue;
         }
+        // if it's a doodlebugs
+        if (currOrganism && currOrganism->getIdentity() == "Doodlebug")
+        { // moves first, this increment the moves taken
+          currOrganism->take_move();
+          // write logic to actually move the currOrganism on the board to adjacent position
+          antPositions = getAdjacentAntsPosition(organism, row, col, rowLength, colLength);
+          for (auto pos : antPositions)
+          {
+            std::cout << "(" << pos.first << ", " << pos.second << ")" << std::endl;
+          }
 
-        // if there's an adjacent ant, eat it -> setDayStarve(0)
-        // move the doodlebug to that position by: deleting the ant, and move doodlebug to that position
-        if (antPositions.size() > 0)
-        { // if there's an ant nearby
-          cout << "how many ants are nearby this doodlebug " << antPositions.size() << endl;
-          currOrganism->setDayStarved();
-          // auto [x, y] is an c++ 17 extension
-          //  auto [ant_row, ant_col] = antPositions[rand() % antPositions.size()];
-          auto ant_position = antPositions[rand() % antPositions.size()];
-          int new_row = ant_position.first;
-          int new_col = ant_position.second;
-          Organism *adjacentAnt = organism[new_row][new_col];
-          //  delete adjacentAnt;
-          organism[new_row][new_col] = nullptr;
-          swapPosition(organism, row, col, new_row, new_col);
-          //  cout << "visualize the board after the swap position" << endl;
+          // if there's an adjacent ant, eat it -> setDayStarve(0)
+          // move the doodlebug to that position by: deleting the ant, and move doodlebug to that position
+          if (antPositions.size() > 0)
+          { // if there's an ant nearby
+            cout << "how many ants are nearby this doodlebug " << antPositions.size() << endl;
+            currOrganism->setDayStarved();
+            // auto [x, y] is an c++ 17 extension
+            //  auto [ant_row, ant_col] = antPositions[rand() % antPositions.size()];
+            auto ant_position = antPositions[rand() % antPositions.size()];
+            int new_row = ant_position.first;
+            int new_col = ant_position.second;
+            Organism *adjacentAnt = organism[new_row][new_col];
+            //  delete adjacentAnt;
+            organism[new_row][new_col] = nullptr;
+            swapPosition(organism, row, col, new_row, new_col);
+            //  cout << "visualize the board after the swap position" << endl;
+            //  visualizeOrganism(organism, rowLength, colLength);
+          }
+          else
+          { // else there's no adjacent ant, move it to a random valid position
+            validPosition = getAdjacentValidPosition(organism, row, col, rowLength, colLength);
+            // edge case: to handle, if adjacentPosition is empty
+            if (validPosition.size() > 0)
+            {
+              auto new_position = validPosition[rand() % validPosition.size()];
+              new_row = new_position.first;
+              new_col = new_position.second;
+              swapPosition(organism, row, col, new_row, new_col);
+            }
+          }
+          // visualize After moving either to consume ants, or to empty space
+          //  cout << "visualize After moving either to consume ants, or to empty space" << endl;
           //  visualizeOrganism(organism, rowLength, colLength);
-        }
-        else
-        { // else there's no adjacent ant, move it to a random valid position
+          if (currOrganism->starved_to_death())
+          {
+            // delete here causes error.
+            // delete currOrganism;
+            organism[new_row][new_col] = nullptr;
+          }
+          // if it's breedable, creates a new ant in an adjacent cell that is empty
+          // could be possible that it's nullptr
+          if (currOrganism != nullptr && currOrganism->getIdentity() == "Doodlebug" && currOrganism->breedable())
+          {
+            // using the new_row, new_col check validAdjacentPosition
+            validPosition = getAdjacentValidPosition(organism, new_row, new_col, row_length, col_length);
+            // if there is a valid position
+            if (validPosition.size())
+            {
+              Doodlebug *db = new Doodlebug;
+              auto spawn_position = validPosition[rand() % validPosition.size()];
+              int spawn_row = spawn_position.first;
+              int spawn_col = spawn_position.second;
+              organism[spawn_row][spawn_col] = db;
+            }
+          }
+      }
+    }
+  }
+
+  // moves ants
+  for (int row = 0; row < rowLength; row++)
+  {
+    for (int col = 0; col < colLength; col++)
+    {
+      Organism *currOrganism = organism[row][col];
+      vector<pair<int, int>> validPosition;
+      int new_row = row, new_col = col;
+
+      if (currOrganism != nullptr && currOrganism->getHasMoved())
+      {
+          currOrganism->setHasMoved();
+          continue;
+      }
+      if (currOrganism && currOrganism->getIdentity() == "Ants")
+      {
+          currOrganism->take_move();
           validPosition = getAdjacentValidPosition(organism, row, col, rowLength, colLength);
-          // edge case: to handle, if adjacentPosition is empty
-          if (validPosition.size() > 0)
+          if (validPosition.size())
           {
             auto new_position = validPosition[rand() % validPosition.size()];
             new_row = new_position.first;
             new_col = new_position.second;
             swapPosition(organism, row, col, new_row, new_col);
           }
-        }
-        // visualize After moving either to consume ants, or to empty space
-        //  cout << "visualize After moving either to consume ants, or to empty space" << endl;
-        //  visualizeOrganism(organism, rowLength, colLength);
-        if (currOrganism->starved_to_death())
-        {
-          // delete here causes error.
-          // delete currOrganism;
-          organism[new_row][new_col] = nullptr;
-        }
-        // if it's breedable, creates a new ant in an adjacent cell that is empty
-        // could be possible that it's nullptr
-        if (currOrganism != nullptr && currOrganism->getIdentity() == "Doodlebug" && currOrganism->breedable())
-        {
-          // using the new_row, new_col check validAdjacentPosition
-          validPosition = getAdjacentValidPosition(organism, new_row, new_col, row_length, col_length);
-          // if there is a valid position
-          if (validPosition.size())
+
+          if (currOrganism != nullptr && currOrganism->getIdentity() == "Ants" && currOrganism->breedable())
           {
-            Doodlebug *db = new Doodlebug;
-            auto spawn_position = validPosition[rand() % validPosition.size()];
-            int spawn_row = spawn_position.first;
-            int spawn_col = spawn_position.second;
-            organism[spawn_row][spawn_col] = db;
+            validPosition = getAdjacentValidPosition(organism, new_row, new_col, row_length, col_length);
+            if (validPosition.size())
+            {
+              Ant *ant = new Ant;
+              auto spawn_position = validPosition[rand() % validPosition.size()];
+              int spawn_row = spawn_position.first;
+              int spawn_col = spawn_position.second;
+              organism[spawn_row][spawn_col] = ant;
+            }
           }
-        }
       }
     }
   }
 }
 
-// moves ants
-// for (int row = 0; row < rowLength; row++) {
-//   for (int col = 0; col < colLength; col++) {
-//     Organism* currOrganism = organism[row][col];
-//     vector<pair<int, int>> validPosition;
-//     int new_row = row, new_col = col;
-//     if (currOrganism && currOrganism->getIdentity() == "Ants") {
-//       currOrganism->take_move();
-//       validPosition = getAdjacentValidPosition(organism, row, col, rowLength, colLength);
-//       if (validPosition.size()) {
-//           auto new_position = validPosition[rand() % validPosition.size()];
-//           new_row = new_position.first;
-//           new_col = new_position.second;
-//           swapPosition(organism, row, col, new_row, new_col);
-//       }
 
-//       if (currOrganism != nullptr && currOrganism->getIdentity() == "Ants" && currOrganism->breedable()) {
-//         validPosition = getAdjacentValidPosition(organism, new_row, new_col, row_length, col_length);
-//         if (validPosition.size()) {
-//           Ant* ant = new Ant;
-//           auto spawn_position = validPosition[rand() % validPosition.size()];
-//           int spawn_row = spawn_position.first;
-//           int spawn_col = spawn_position.second;
-//           organism[spawn_row][spawn_col] = ant;
-//         }
-//       }
-//     }
-//   }
-// }
 
 // it's allowing ANT eat ANT, 7:04 PM. mgiht have fixed
 /*
 Once I moved the doodlebug, it goes to let's say the next row it'll move again. I NEED TO MAKE SURE THAT it doesn't move again..
 This is probabily why i'm getting more than 5 doodlebugs moving.
+
+add a hasMoved property, and setMoved property, if the property is true
+then we want to setMove back to false and continue on the next item in the list.
 */
 
 int main()
