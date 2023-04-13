@@ -10,6 +10,11 @@ using namespace std;
 const int HUNDRED_ANTS = 100;
 const int FIVE_DOODLEBUGS = 5;
 const int row_length = 20, col_length = 20;
+// could make these counts into member variable and have getter/setter but i'm lazy
+int ant_count = 5, doodlebug_count = 105;
+int stimulationRanCount = 0;
+void freeValidPositionVector(vector<pair<int, int>> &validPosition);
+void freeVectors(vector<pair<int, int>> &antPositions, vector<pair<int, int>> &validPosition);
 class Organism
 {
 private:
@@ -126,6 +131,14 @@ bool Doodlebug::starved_to_death()
   return (this->getDaysStarved() % 8) == 0;
 }
 
+bool gameEndCondition() {
+  int totalOrganism = ant_count + doodlebug_count;
+  bool overCapacity = totalOrganism >= 400;
+  bool organismExtinction = (ant_count == 0 && doodlebug_count == 0);
+
+  return overCapacity && organismExtinction;
+}
+
 void fill_organism(vector<vector<Organism *>> &organism, int rowLength, int colLength)
 {
   // create 100 ants
@@ -160,42 +173,6 @@ void fill_organism(vector<vector<Organism *>> &organism, int rowLength, int colL
     organism[row][col] = doodlebug;
   }
 }
-
-// void visualizeOrganism(vector<vector<Organism *>> &organism, int rowLength, int colLength)
-// {
-//   cout << "+";
-//   for (int j = 0; j < colLength; j++)
-//   {
-//     cout << "---+";
-//   }
-//   cout << endl;
-//   for (int i = 0; i < rowLength; i++)
-//   {
-//     cout << "|";
-//     for (int j = 0; j < colLength; j++)
-//     {
-//        if (organism[i][j] == nullptr)
-//        {
-//          cout << "   |";
-//        }
-//        else
-//        {
-//          string s = organism[i][j]->getIdentity();
-//          if (s == "Ants")
-//            cout << " A |";
-//          else if (s == "Doodlebug")
-//            cout << " D |";
-//        }
-//     }
-//     cout << endl
-//          << "+";
-//     for (int j = 0; j < colLength; j++)
-//     {
-//        cout << "---+";
-//     }
-//     cout << endl;
-//   }
-// }
 
 void visualizeOrganism(vector<vector<Organism *>> &organism, int rowLength, int colLength)
 {
@@ -345,6 +322,14 @@ void swapPosition(vector<vector<Organism *>> &organism, int row, int col, int ne
 
 void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength)
 {
+  int totalOrganism = ant_count + doodlebug_count;
+  if (totalOrganism >= 400) {
+    cout << "Total organism has exceed capacity" << endl;
+  }
+  if (ant_count == 0 && doodlebug_count == 0) {
+    cout << "All organism has gone extinct" << endl;
+  }
+
   // move the doodlebugs first, afterwards move the ants
   for (int row = 0; row < rowLength; row++)
   {
@@ -364,16 +349,16 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
           currOrganism->take_move();
           // write logic to actually move the currOrganism on the board to adjacent position
           antPositions = getAdjacentAntsPosition(organism, row, col, rowLength, colLength);
-          for (auto pos : antPositions)
-          {
-            std::cout << "(" << pos.first << ", " << pos.second << ")" << std::endl;
-          }
+          // for (auto pos : antPositions)
+          // {
+          //   std::cout << "(" << pos.first << ", " << pos.second << ")" << std::endl;
+          // }
 
           // if there's an adjacent ant, eat it -> setDayStarve(0)
           // move the doodlebug to that position by: deleting the ant, and move doodlebug to that position
           if (antPositions.size() > 0)
           { // if there's an ant nearby
-            cout << "how many ants are nearby this doodlebug " << antPositions.size() << endl;
+            // cout << "how many ants are nearby this doodlebug " << antPositions.size() << endl;
             currOrganism->setDayStarved();
             // auto [x, y] is an c++ 17 extension
             //  auto [ant_row, ant_col] = antPositions[rand() % antPositions.size()];
@@ -384,6 +369,8 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
             //  delete adjacentAnt;
             organism[new_row][new_col] = nullptr;
             swapPosition(organism, row, col, new_row, new_col);
+            ant_count--;
+            cout << "a doodlebug has eaten an ant" << endl;
             //  cout << "visualize the board after the swap position" << endl;
             //  visualizeOrganism(organism, rowLength, colLength);
           }
@@ -406,6 +393,8 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
           {
             // delete here causes error.
             // delete currOrganism;
+            cout << "a doodlebug has died due to starvation" << endl;
+            doodlebug_count--;
             organism[new_row][new_col] = nullptr;
           }
           // if it's breedable, creates a new ant in an adjacent cell that is empty
@@ -422,9 +411,12 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
               int spawn_row = spawn_position.first;
               int spawn_col = spawn_position.second;
               organism[spawn_row][spawn_col] = db;
+              cout << "a new doodlebug has spawned" << endl;
+              doodlebug_count++;
             }
           }
       }
+      freeVectors(antPositions, validPosition);
     }
   }
 
@@ -464,23 +456,62 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
               int spawn_row = spawn_position.first;
               int spawn_col = spawn_position.second;
               organism[spawn_row][spawn_col] = ant;
+              cout << "a new ant has been spawned" << endl;
+              ant_count++;
             }
           }
       }
+      freeValidPositionVector(validPosition);
     }
   }
 }
 
+void freeValidPositionVector(vector<pair<int, int>> &validPosition) {
+  validPosition.clear();
+  vector<pair<int, int>>().swap(validPosition);
+}
 
+void freeVectors(vector<pair<int, int>> &antPositions, vector<pair<int, int>> &validPosition)
+{
+  antPositions.clear();
+  vector<pair<int, int>>().swap(antPositions);
+  validPosition.clear();
+  vector<pair<int, int>>().swap(validPosition);
+}
+
+void freeOrganismVector(vector<vector<Organism *>> &organism)
+{
+  // iterate over each element in the 2D vector
+  for (int i = 0; i < row_length; i++)
+  {
+    for (int j = 0; j < col_length; j++)
+    {
+      // if the element is not null, delete the Organism object it points to
+      if (organism[i][j] != nullptr)
+      {
+          delete organism[i][j];
+      }
+    }
+    // clear the inner vector to free up its memory
+    organism[i].clear();
+  }
+  // clear the outer vector to free up its memory
+  organism.clear();
+}
 
 // it's allowing ANT eat ANT, 7:04 PM. mgiht have fixed
 /*
 Once I moved the doodlebug, it goes to let's say the next row it'll move again. I NEED TO MAKE SURE THAT it doesn't move again..
-This is probabily why i'm getting more than 5 doodlebugs moving.
+This is probabily why i'm getting more than 5 doodlebugs moving sometimes.
 
 add a hasMoved property, and setMoved property, if the property is true
 then we want to setMove back to false and continue on the next item in the list.
 */
+
+void runStimulation(vector<vector<Organism *>> organism) {
+  nextStep(organism, row_length, col_length);
+  visualizeOrganism(organism, row_length, col_length);
+}
 
 int main()
 {
@@ -488,9 +519,13 @@ int main()
   srand(time(0));
   vector<vector<Organism *>> organism(row_length, vector<Organism *>(col_length, nullptr));
   fill_organism(organism, row_length, col_length);
-  cout << "visualize initial board" << endl;
+  cout << "visualize initial stage" << endl;
   visualizeOrganism(organism, row_length, col_length);
-  nextStep(organism, row_length, col_length);
-  cout << "visualize organism after taking another step " << endl;
-  visualizeOrganism(organism, row_length, col_length);
+  while (!gameEndCondition()) {
+    runStimulation(organism);
+    stimulationRanCount++;
+    cout << "current amount of doodlebugs left: " << doodlebug_count << endl;
+    cout << "current amount of ants left: " << ant_count << endl;
+  }
+  cout << "the end ended when the stimulation has ran for" << stimulationRanCount << endl;
 }
