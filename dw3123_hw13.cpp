@@ -3,16 +3,16 @@
 #include <string>
 #include <cstdlib>
 #include <ctime>
-#include <iomanip> // include this header for setw()
-
+#include <string>
 using namespace std;
 
 const int HUNDRED_ANTS = 100;
 const int FIVE_DOODLEBUGS = 5;
 const int row_length = 20, col_length = 20;
 // could make these counts into member variable and have getter/setter but i'm lazy
-int ant_count = 5, doodlebug_count = 105;
+int ant_count = 100, doodlebug_count = 5, totalOrganism = 0;
 int stimulationRanCount = 0;
+string continueInput = "";
 void freeValidPositionVector(vector<pair<int, int>> &validPosition);
 void freeVectors(vector<pair<int, int>> &antPositions, vector<pair<int, int>> &validPosition);
 class Organism
@@ -128,12 +128,12 @@ int Doodlebug::getDaysStarved()
 }
 bool Doodlebug::starved_to_death()
 {
-  return (this->getDaysStarved() % 8) == 0;
+  return (this->getDaysStarved() != 0 && (this->getDaysStarved() % 8) == 0);
 }
 
 bool gameEndCondition() {
-  int totalOrganism = ant_count + doodlebug_count;
-  bool overCapacity = totalOrganism >= 400;
+  totalOrganism = (ant_count + doodlebug_count);
+  bool overCapacity = (totalOrganism >= 400);
   bool organismExtinction = (ant_count == 0 && doodlebug_count == 0);
 
   return overCapacity && organismExtinction;
@@ -322,13 +322,7 @@ void swapPosition(vector<vector<Organism *>> &organism, int row, int col, int ne
 
 void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength)
 {
-  int totalOrganism = ant_count + doodlebug_count;
-  if (totalOrganism >= 400) {
-    cout << "Total organism has exceed capacity" << endl;
-  }
-  if (ant_count == 0 && doodlebug_count == 0) {
-    cout << "All organism has gone extinct" << endl;
-  }
+
 
   // move the doodlebugs first, afterwards move the ants
   for (int row = 0; row < rowLength; row++)
@@ -357,7 +351,7 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
           // if there's an adjacent ant, eat it -> setDayStarve(0)
           // move the doodlebug to that position by: deleting the ant, and move doodlebug to that position
           if (antPositions.size() > 0)
-          { // if there's an ant nearby
+          {
             // cout << "how many ants are nearby this doodlebug " << antPositions.size() << endl;
             currOrganism->setDayStarved();
             // auto [x, y] is an c++ 17 extension
@@ -371,8 +365,6 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
             swapPosition(organism, row, col, new_row, new_col);
             ant_count--;
             cout << "a doodlebug has eaten an ant" << endl;
-            //  cout << "visualize the board after the swap position" << endl;
-            //  visualizeOrganism(organism, rowLength, colLength);
           }
           else
           { // else there's no adjacent ant, move it to a random valid position
@@ -413,6 +405,7 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
               organism[spawn_row][spawn_col] = db;
               cout << "a new doodlebug has spawned" << endl;
               doodlebug_count++;
+              cout << "with the new addition of spawned doodlebug there should be " << doodlebug_count << " amount of doodlebugs" << endl;
             }
           }
       }
@@ -463,6 +456,18 @@ void nextStep(vector<vector<Organism *>> &organism, int rowLength, int colLength
       }
       freeValidPositionVector(validPosition);
     }
+  }
+
+  totalOrganism = ant_count + doodlebug_count;
+  if (totalOrganism >= 400)
+  {
+    cout << "Total organism has exceed capacity" << endl;
+    return;
+  }
+  if (ant_count == 0 && doodlebug_count == 0)
+  {
+    cout << "All organism has gone extinct" << endl;
+    return;
   }
 }
 
@@ -521,11 +526,22 @@ int main()
   fill_organism(organism, row_length, col_length);
   cout << "visualize initial stage" << endl;
   visualizeOrganism(organism, row_length, col_length);
-  while (!gameEndCondition()) {
+  cout << "press Enter to continue the stimulation or insert any key and enter to exit" << endl;
+  while (getline(cin, continueInput) && continueInput == "" && !gameEndCondition()) {
     runStimulation(organism);
     stimulationRanCount++;
+    cout << "current amount of stimulation run: " << stimulationRanCount << endl;
     cout << "current amount of doodlebugs left: " << doodlebug_count << endl;
     cout << "current amount of ants left: " << ant_count << endl;
   }
-  cout << "the end ended when the stimulation has ran for" << stimulationRanCount << endl;
+  // while (!gameEndCondition()) {
+  //   runStimulation(organism);
+  //   stimulationRanCount++;
+  //   cout << "current amount of doodlebugs left: " << doodlebug_count << endl;
+  //   cout << "current amount of ants left: " << ant_count << endl;
+  // }
+  cout << "ended when the stimulation has ran for " << stimulationRanCount << " times"<< endl;
+  cout << "ended with " << doodlebug_count << " amount of doodlebugs " << endl;
+  cout << "ended with " << ant_count << " amount of ants " << endl;
+
 }
